@@ -1,13 +1,8 @@
-# 🛡️ Complete Cybersecurity MCP Suite Integration Guide
+# 🛡️ MCP Security Suite - Technical Reference
 
-## Overview
+> **New users: Start with [GETTING_STARTED.md](GETTING_STARTED.md) instead!**
 
-You now have a comprehensive suite of MCP servers for cybersecurity operations:
-
-1. **Security Tools Server** - Core security assessment capabilities
-2. **ASM Server** - Attack Surface Management and reconnaissance
-3. **Penetration Testing Server** - Vulnerability assessment and exploitation
-4. **Red Team Operations Server** - Advanced adversary simulation
+This document provides technical details for advanced users and developers.
 
 ## 🏗️ Architecture
 
@@ -31,30 +26,9 @@ You now have a comprehensive suite of MCP servers for cybersecurity operations:
     └───────────────────┘               └───────────────────┘
 ```
 
-## 🚀 Quick Start Setup
+## 📋 Complete Configuration Reference
 
-### 1. Install All Dependencies
-
-```bash
-# Create virtual environment
-python -m venv security-mcp-env
-source security-mcp-env/bin/activate  # Windows: security-mcp-env\Scripts\activate
-
-# Install core dependencies
-pip install mcp aiohttp dnspython python-whois
-
-# Install optional dependencies for advanced features
-pip install shodan censys python-nmap paramiko cryptography
-pip install beautifulsoup4 lxml requests pyyaml
-
-# For reporting
-pip install jinja2 matplotlib pandas
-```
-
-### 2. Environment Configuration
-
-Create `.env` file with all API keys:
-
+### Full Environment Variables
 ```env
 # Core APIs
 HIBP_API_KEY=your_hibp_key
@@ -63,18 +37,20 @@ VT_API_KEY=your_virustotal_key
 CENSYS_API_ID=your_censys_id
 CENSYS_API_SECRET=your_censys_secret
 
-# Additional APIs
+# Additional APIs (optional)
 ABUSEIPDB_KEY=your_abuseipdb_key
 ALIENVAULT_KEY=your_otx_key
 GREYNOISE_KEY=your_greynoise_key
 
-# Operation Config
+# Operation Configuration
 AUTHORIZED_SCOPE=target1.com,target2.com,192.168.1.0/24
 OPERATION_NAME=SecurityAssessment2024
 LOG_LEVEL=INFO
+RATE_LIMIT=10
+TIMEOUT=30
 ```
 
-### 3. Complete Claude Desktop Configuration
+### Complete Claude Desktop Configuration
 
 ```json
 {

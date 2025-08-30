@@ -75,12 +75,15 @@ def main():
     
     if passed == len(servers):
         print("\n✓ All servers are working properly!")
-        print("\nYou can now:")
-        print("1. Move claude_desktop_config.json to the appropriate Claude config directory")
-        print("2. Use custom_client.py to interact with the servers programmatically")
-        print("3. Or use the servers directly with Claude Desktop")
+        print("\nNext steps:")
+        print("• Run 'python setup_wizard.py' for guided configuration")
+        print("• Or use custom_client.py to interact with the servers programmatically")
     else:
         print("\n✗ Some servers failed. Please check the errors above.")
+        print("\nTroubleshooting:")
+        print("• Make sure all dependencies are installed: pip install -r requirements.txt")
+        print("• Check that Python 3.8+ is being used")
+        print("• Run 'python setup_wizard.py' for help with configuration")
 
 if __name__ == "__main__":
     main()

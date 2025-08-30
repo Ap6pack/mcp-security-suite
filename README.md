@@ -2,6 +2,14 @@
 
 A collection of Model Context Protocol (MCP) servers for ethical security testing, attack surface management, and penetration testing workflows.
 
+## 🚀 New to MCP Security Suite?
+
+**[Start with our Getting Started Guide →](GETTING_STARTED.md)**
+
+It will get you up and running in under 5 minutes!
+
+**Using a different MCP client?** Check out our [Integration Guide](MCP_INTEGRATION_GUIDE.md) for examples with web apps, CI/CD, REST APIs, and more!
+
 ## 🔒 Important Security & Legal Notice
 
 **These tools are for authorized security testing only!**
@@ -38,39 +46,59 @@ Attack Surface Management features:
 
 ## 🚀 Installation
 
-### Prerequisites
+### Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/Ap6pack/mcp-security-suite.git
+cd mcp-security-suite
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the setup wizard
+python setup_wizard.py
+```
+
+The setup wizard will guide you through:
+- API key configuration
+- Claude Desktop integration
+- Server verification
+
+### Manual Installation
+
+#### Prerequisites
 
 ```bash
 # Python 3.8+ required
 python --version
 
-# Create virtual environment
+# Create virtual environment (optional but recommended)
 python -m venv mcp-security-env
 source mcp-security-env/bin/activate  # On Windows: mcp-security-env\Scripts\activate
 
 # Install dependencies
-pip install mcp aiohttp dnspython python-whois ssl-checker
+pip install -r requirements.txt
 ```
 
-### Optional Dependencies
-
-```bash
-# For advanced features
-pip install shodan censys masscan nmap-python
-```
-
-### API Keys Setup
+#### API Keys Setup
 
 Create a `.env` file in your project directory:
 
 ```env
-# API Keys for enhanced functionality
+# API Keys for enhanced functionality (all optional)
 HIBP_API_KEY=your_have_i_been_pwned_key
 SHODAN_API_KEY=your_shodan_api_key
 VT_API_KEY=your_virustotal_api_key
 CENSYS_API_ID=your_censys_id
 CENSYS_API_SECRET=your_censys_secret
 ```
+
+Get your API keys from:
+- **HIBP**: https://haveibeenpwned.com/API/Key
+- **Shodan**: https://account.shodan.io/
+- **VirusTotal**: https://www.virustotal.com/gui/my-apikey
+- **Censys**: https://censys.io/account/api
 
 ## 🔧 Configuration
 
@@ -256,20 +284,35 @@ logging.basicConfig(
 
 ### Common Issues
 
-1. **Connection Timeouts**
-   - Increase timeout values
+1. **"Nothing happens when I run a server!"**
+   - This is normal! MCP servers wait for connections from Claude
+   - Run `python test_servers.py` to verify servers work
+   - Use `python setup_wizard.py` to configure Claude Desktop
+
+2. **"Claude doesn't see the tools"**
+   - Make sure you restarted Claude Desktop after configuration
+   - Check that the paths in claude_desktop_config.json are absolute paths
+   - Verify Python is in your system PATH
+
+3. **"Module not found" errors**
+   - Run `pip install -r requirements.txt`
+   - Make sure you're using Python 3.8 or higher
+   - If using a virtual environment, ensure it's activated
+
+4. **Connection Timeouts**
+   - Increase timeout values in the server configuration
    - Check network connectivity
-   - Verify firewall rules
+   - Verify firewall rules aren't blocking connections
 
-2. **Rate Limiting**
+5. **Rate Limiting**
+   - Add API keys for higher limits
    - Implement backoff strategies
-   - Use API keys for higher limits
-   - Cache results
+   - Cache results when possible
 
-3. **SSL Errors**
+6. **SSL/Certificate Errors**
    - Update certificates
-   - Configure SSL verification
-   - Check proxy settings
+   - Configure SSL verification settings
+   - Check proxy settings if behind corporate firewall
 
 ## 📊 Output Formats
 

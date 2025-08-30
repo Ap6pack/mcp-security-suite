@@ -1091,4 +1091,18 @@ async def main():
     await server.run()
 
 if __name__ == "__main__":
+    print("\n" + "="*60)
+    print("🎯 MCP Red Team Operations Server")
+    print("="*60)
+    print("\nThis is an MCP server that provides red team simulation")
+    print("and adversary emulation tools.")
+    print("\n⚠️  This server is waiting for MCP client connections...")
+    print("It won't show any output when running correctly.\n")
+    print("To get started:")
+    print("  1. Run 'python setup_wizard.py' for guided setup")
+    print("  2. Run 'python test_servers.py' to verify all servers work")
+    print("  3. Configure Claude Desktop to use this server\n")
+    print("Press Ctrl+C to stop the server.\n")
+    print("-"*60 + "\n")
+    
     asyncio.run(main())
