@@ -1,0 +1,16 @@
+# Core APIs
+HIBP_API_KEY=your_hibp_key
+SHODAN_API_KEY=your_shodan_key
+VT_API_KEY=your_virustotal_key
+CENSYS_API_ID=your_censys_id
+CENSYS_API_SECRET=your_censys_secret
+
+# Additional APIs
+ABUSEIPDB_KEY=your_abuseipdb_key
+ALIENVAULT_KEY=your_otx_key
+GREYNOISE_KEY=your_greynoise_key
+
+# Operation Config
+AUTHORIZED_SCOPE=target1.com,target2.com,192.168.1.0/24
+OPERATION_NAME=SecurityAssessment2025
+LOG_LEVEL=INFO
