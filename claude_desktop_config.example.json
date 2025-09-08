@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "security-tools": {
+      "command": "python",
+      "args": ["/absolute/path/to/mcp-security-suite/security_server.py"],
+      "env": {
+        "HIBP_API_KEY": "your-hibp-api-key-here"
+      }
+    },
+    "asm-tools": {
+      "command": "python",
+      "args": ["/absolute/path/to/mcp-security-suite/asm_server.py"],
+      "env": {
+        "SHODAN_API_KEY": "your-shodan-api-key-here"
+      }
+    },
+    "pentest-tools": {
+      "command": "python",
+      "args": ["/absolute/path/to/mcp-security-suite/pentest_server.py"]
+    },
+    "redteam-tools": {
+      "command": "python",
+      "args": ["/absolute/path/to/mcp-security-suite/redteam_server.py"]
+    }
+  }
+}

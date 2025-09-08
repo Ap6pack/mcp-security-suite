@@ -1,0 +1,147 @@
+{
+  "mcpServers": {
+    "security-tools": {
+      "command": "python",
+      "args": ["/path/to/security_server.py"],
+      "env": {
+        "HIBP_API_KEY": "your-api-key-here",
+        "SHODAN_API_KEY": "your-shodan-key",
+        "VT_API_KEY": "your-virustotal-key"
+      },
+      "capabilities": {
+        "tools": {
+          "check_ssl_certificate": {
+            "description": "Check SSL certificate validity and details",
+            "rateLimit": 60
+          },
+          "query_cve_database": {
+            "description": "Query CVE/NVD database for vulnerabilities",
+            "rateLimit": 30
+          },
+          "analyze_security_headers": {
+            "description": "Analyze HTTP security headers",
+            "rateLimit": 60
+          },
+          "dns_lookup": {
+            "description": "Perform DNS lookups",
+            "rateLimit": 120
+          },
+          "whois_lookup": {
+            "description": "WHOIS domain information",
+            "rateLimit": 10
+          },
+          "check_breach_database": {
+            "description": "Check breach databases (requires API key)",
+            "rateLimit": 5
+          }
+        }
+      },
+      "metadata": {
+        "version": "1.0.0",
+        "author": "Security Team",
+        "description": "Ethical security assessment tools for authorized testing",
+        "compliance": ["responsible-disclosure", "authorization-required"]
+      }
+    },
+    
+    "asm-tools": {
+      "command": "python",
+      "args": ["/path/to/asm_server.py"],
+      "description": "Attack Surface Management tools",
+      "capabilities": {
+        "tools": {
+          "discover_subdomains": {
+            "description": "Enumerate subdomains for a given domain",
+            "sources": ["crt.sh", "dns", "wayback"]
+          },
+          "identify_technologies": {
+            "description": "Identify technologies used by a target",
+            "methods": ["headers", "responses", "patterns"]
+          },
+          "map_attack_surface": {
+            "description": "Create comprehensive attack surface map",
+            "includes": ["ports", "services", "endpoints", "technologies"]
+          }
+        }
+      }
+    },
+    
+    "threat-intel": {
+      "command": "python",
+      "args": ["/path/to/threat_intel_server.py"],
+      "description": "Threat intelligence integration",
+      "capabilities": {
+        "tools": {
+          "check_ip_reputation": {
+            "description": "Check IP address reputation",
+            "sources": ["abuseipdb", "virustotal", "alienvault"]
+          },
+          "analyze_ioc": {
+            "description": "Analyze indicators of compromise",
+            "types": ["ip", "domain", "hash", "email"]
+          },
+          "get_threat_feeds": {
+            "description": "Retrieve threat intelligence feeds",
+            "formats": ["stix", "json", "csv"]
+          }
+        }
+      }
+    },
+    
+    "compliance-audit": {
+      "command": "python",
+      "args": ["/path/to/compliance_server.py"],
+      "description": "Security compliance and auditing tools",
+      "capabilities": {
+        "tools": {
+          "audit_cis_benchmark": {
+            "description": "Audit against CIS benchmarks",
+            "platforms": ["linux", "windows", "docker", "kubernetes"]
+          },
+          "check_pci_compliance": {
+            "description": "PCI DSS compliance checking",
+            "scopes": ["network", "application", "data"]
+          },
+          "generate_compliance_report": {
+            "description": "Generate compliance reports",
+            "formats": ["pdf", "json", "html"]
+          }
+        }
+      }
+    }
+  },
+  
+  "security_policies": {
+    "authorization": {
+      "require_explicit_permission": true,
+      "log_all_activities": true,
+      "scope_limitations": ["internal_only", "authorized_targets"]
+    },
+    "rate_limiting": {
+      "global_limit": 100,
+      "per_tool_limits": true,
+      "cooldown_period": 60
+    },
+    "data_handling": {
+      "encryption_at_rest": true,
+      "encryption_in_transit": true,
+      "retention_days": 30,
+      "pii_redaction": true
+    }
+  },
+  
+  "integration_examples": {
+    "claude_desktop": {
+      "config_location": "~/Library/Application Support/Claude/claude_desktop_config.json",
+      "add_to_servers": true
+    },
+    "vscode": {
+      "extension": "mcp-client",
+      "settings_path": ".vscode/mcp-settings.json"
+    },
+    "custom_client": {
+      "protocol": "stdio",
+      "transport": "subprocess"
+    }
+  }
+}
