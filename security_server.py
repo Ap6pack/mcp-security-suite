@@ -730,13 +730,6 @@ class SecurityAnalyst:
             return BusinessRiskLevel.INFO
 
 # Integration into SecurityToolsServer class
-class SecurityToolsServer:
-    def __init__(self, config: SecurityConfig = None):
-        self.config = config or SecurityConfig()
-        self.server = Server("mcp-security-suite")
-        self.analyst = SecurityAnalyst()  # Add AI analyst
-        self.setup_tools()
-    
     # Add new tool for business analysis
     async def _analyze_business_impact(self, findings: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze findings for business impact"""
