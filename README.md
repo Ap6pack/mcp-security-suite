@@ -1,3 +1,4 @@
+[![MCP Badge](https://lobehub.com/badge/mcp-full/ap6pack-mcp-security-suite)](https://lobehub.com/mcp/ap6pack-mcp-security-suite)
 # MCP Security Tools Suite
 
 A collection of Model Context Protocol (MCP) servers for ethical security testing, attack surface management, and penetration testing workflows.
