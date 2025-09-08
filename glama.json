@@ -1,6 +1,9 @@
 {
   "$schema": "https://glama.ai/mcp/schemas/server.json",
   "maintainers": [
-    "Adam R Heaton - Ap6pack"
-  ]
+    "Adam R Heaton"
+  ],
+  "description": "Professional security testing and attack surface management tools for authorized penetration testing workflows",
+  "categories": ["security", "pentesting", "vulnerability-management", "reconnaissance"],
+  "keywords": ["security", "pentesting", "vulnerabilities", "reconnaissance", "red-team", "blue-team", "attack-surface", "CVE", "SSL", "DNS"]
 }
