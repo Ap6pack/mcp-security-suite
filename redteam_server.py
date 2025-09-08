@@ -1071,6 +1071,672 @@ class RedTeamServer:
         }
         return mitigation_map.get(technique_id, ['Implement defense in depth'])
     
+    async def _analyze_business_impact(self, findings: List[Dict[str, Any]], asset_context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Analyze red team findings for business impact and risk prioritization
+        
+        Args:
+            findings: List of red team operation findings
+            asset_context: Additional business context for assets
+            
+        Returns:
+            Comprehensive business impact analysis
+        """
+        
+        @dataclass
+        class RedTeamContext:
+            """Context for red team business impact analysis"""
+            operation_type: str = "adversary_simulation"
+            threat_actor_profile: str = "advanced_persistent_threat"
+            business_sector: str = "technology"
+            regulatory_requirements: List[str] = field(default_factory=lambda: ["SOX", "GDPR", "PCI-DSS"])
+            critical_business_processes: List[str] = field(default_factory=lambda: [
+                "customer_data_processing", "financial_transactions", "intellectual_property"
+            ])
+            
+        @dataclass 
+        class AdversaryAnalyst:
+            """Red team adversary impact analyst"""
+            
+            def assess_attack_path_risk(self, findings: List[Dict]) -> Dict[str, Any]:
+                """Assess risk of attack paths discovered"""
+                attack_paths = []
+                total_risk_score = 0
+                
+                for finding in findings:
+                    if finding.get('type') in ['lateral_movement', 'persistence', 'credential_access']:
+                        path_risk = self._calculate_path_risk(finding)
+                        attack_paths.append({
+                            'technique': finding.get('technique', 'unknown'),
+                            'from_asset': finding.get('source_host', finding.get('target')),
+                            'to_asset': finding.get('target_host', finding.get('target')),
+                            'risk_score': path_risk,
+                            'business_impact': self._get_path_business_impact(path_risk)
+                        })
+                        total_risk_score += path_risk
+                
+                return {
+                    'total_attack_paths': len(attack_paths),
+                    'high_risk_paths': len([p for p in attack_paths if p['risk_score'] >= 8]),
+                    'average_path_risk': total_risk_score / max(len(attack_paths), 1),
+                    'attack_paths': attack_paths,
+                    'crown_jewel_exposure': self._assess_crown_jewel_exposure(attack_paths)
+                }
+            
+            def _calculate_path_risk(self, finding: Dict) -> int:
+                """Calculate risk score for attack path (1-10)"""
+                base_risk = 5
+                
+                # Increase risk based on technique sophistication
+                technique = finding.get('technique', '').lower()
+                if 'pass-the-hash' in technique or 'golden_ticket' in technique:
+                    base_risk += 3
+                elif 'lateral_movement' in str(finding.get('type', '')):
+                    base_risk += 2
+                
+                # Increase risk for persistence mechanisms
+                if finding.get('type') == 'persistence':
+                    base_risk += 2
+                    if finding.get('hidden', False):
+                        base_risk += 1
+                
+                # Increase risk for credential access
+                if 'credential' in str(finding.get('type', '')):
+                    base_risk += 3
+                
+                return min(base_risk, 10)
+            
+            def _get_path_business_impact(self, risk_score: int) -> str:
+                """Get business impact level for attack path"""
+                if risk_score >= 9:
+                    return "Critical - Full domain compromise possible"
+                elif risk_score >= 7:
+                    return "High - Significant lateral movement capability"
+                elif risk_score >= 5:
+                    return "Medium - Limited expansion possible"
+                else:
+                    return "Low - Contained access only"
+            
+            def _assess_crown_jewel_exposure(self, attack_paths: List[Dict]) -> Dict[str, Any]:
+                """Assess exposure of critical business assets"""
+                crown_jewels = {
+                    'domain_controllers': 0,
+                    'database_servers': 0, 
+                    'file_servers': 0,
+                    'email_servers': 0,
+                    'financial_systems': 0
+                }
+                
+                # Analyze attack paths to critical assets
+                for path in attack_paths:
+                    target = path.get('to_asset', '').lower()
+                    if any(keyword in target for keyword in ['dc', 'domain', 'ldap']):
+                        crown_jewels['domain_controllers'] += 1
+                    elif any(keyword in target for keyword in ['sql', 'db', 'database']):
+                        crown_jewels['database_servers'] += 1
+                    elif any(keyword in target for keyword in ['file', 'share', 'nas']):
+                        crown_jewels['file_servers'] += 1
+                    elif any(keyword in target for keyword in ['mail', 'exchange', 'smtp']):
+                        crown_jewels['email_servers'] += 1
+                    elif any(keyword in target for keyword in ['finance', 'accounting', 'erp']):
+                        crown_jewels['financial_systems'] += 1
+                
+                exposed_assets = sum(1 for count in crown_jewels.values() if count > 0)
+                total_paths_to_critical = sum(crown_jewels.values())
+                
+                return {
+                    'exposed_crown_jewels': crown_jewels,
+                    'total_exposed_assets': exposed_assets,
+                    'total_attack_paths_to_critical': total_paths_to_critical,
+                    'exposure_severity': 'Critical' if exposed_assets >= 3 else 
+                                       'High' if exposed_assets >= 2 else 
+                                       'Medium' if exposed_assets >= 1 else 'Low'
+                }
+            
+            def assess_adversary_capabilities(self, findings: List[Dict]) -> Dict[str, Any]:
+                """Assess demonstrated adversary capabilities"""
+                capabilities = {
+                    'initial_access': False,
+                    'execution': False,
+                    'persistence': False,
+                    'privilege_escalation': False,
+                    'defense_evasion': False,
+                    'credential_access': False,
+                    'discovery': False,
+                    'lateral_movement': False,
+                    'collection': False,
+                    'command_and_control': False,
+                    'exfiltration': False,
+                    'impact': False
+                }
+                
+                # Map findings to MITRE ATT&CK tactics
+                for finding in findings:
+                    finding_type = finding.get('type', '').lower()
+                    technique = finding.get('technique', '').lower()
+                    
+                    if 'phishing' in technique or finding_type == 'phishing_campaign':
+                        capabilities['initial_access'] = True
+                    if 'payload' in finding_type or 'execution' in finding_type:
+                        capabilities['execution'] = True
+                    if finding_type == 'persistence':
+                        capabilities['persistence'] = True
+                    if 'privilege' in technique or 'escalation' in technique:
+                        capabilities['privilege_escalation'] = True
+                    if finding_type == 'defense_evasion' or 'evasion' in technique:
+                        capabilities['defense_evasion'] = True
+                    if 'credential' in finding_type or 'password' in technique:
+                        capabilities['credential_access'] = True
+                    if 'discovery' in finding_type or 'recon' in technique:
+                        capabilities['discovery'] = True
+                    if finding_type == 'lateral_movement':
+                        capabilities['lateral_movement'] = True
+                    if 'collection' in finding_type or 'data' in technique:
+                        capabilities['collection'] = True
+                    if 'c2' in finding_type or finding_type == 'c2_infrastructure':
+                        capabilities['command_and_control'] = True
+                    if finding_type == 'data_exfiltration':
+                        capabilities['exfiltration'] = True
+                    if 'impact' in finding_type or 'ransomware' in technique:
+                        capabilities['impact'] = True
+                
+                demonstrated_tactics = sum(1 for cap in capabilities.values() if cap)
+                sophistication_level = self._determine_sophistication_level(demonstrated_tactics, findings)
+                
+                return {
+                    'demonstrated_capabilities': capabilities,
+                    'tactics_count': demonstrated_tactics,
+                    'sophistication_level': sophistication_level,
+                    'apt_simulation_completeness': f"{(demonstrated_tactics / 12) * 100:.1f}%",
+                    'threat_actor_emulation': self._categorize_threat_actor(capabilities)
+                }
+            
+            def _determine_sophistication_level(self, tactics_count: int, findings: List[Dict]) -> str:
+                """Determine adversary sophistication level"""
+                # Check for advanced techniques
+                advanced_techniques = 0
+                for finding in findings:
+                    technique = finding.get('technique', '').lower()
+                    if any(advanced in technique for advanced in [
+                        'pass-the-hash', 'golden_ticket', 'dcsync', 'zerologon',
+                        'kerberoasting', 'bloodhound', 'mimikatz', 'covenant'
+                    ]):
+                        advanced_techniques += 1
+                
+                if tactics_count >= 10 and advanced_techniques >= 3:
+                    return "Nation-State Level"
+                elif tactics_count >= 8 and advanced_techniques >= 2:
+                    return "Advanced Persistent Threat"
+                elif tactics_count >= 6:
+                    return "Sophisticated Criminal Group"
+                elif tactics_count >= 4:
+                    return "Intermediate Threat Actor"
+                else:
+                    return "Basic Threat Actor"
+            
+            def _categorize_threat_actor(self, capabilities: Dict[str, bool]) -> str:
+                """Categorize the type of threat actor being simulated"""
+                if capabilities.get('exfiltration') and capabilities.get('credential_access'):
+                    if capabilities.get('persistence') and capabilities.get('lateral_movement'):
+                        return "APT Group (Data Theft Focus)"
+                    return "Cyber Espionage Group"
+                elif capabilities.get('impact') and capabilities.get('command_and_control'):
+                    return "Ransomware Operator"
+                elif capabilities.get('lateral_movement') and capabilities.get('privilege_escalation'):
+                    return "Network Intrusion Specialist"
+                elif capabilities.get('initial_access') and capabilities.get('execution'):
+                    return "Initial Access Broker"
+                else:
+                    return "Opportunistic Attacker"
+            
+            def calculate_operational_risk(self, findings: List[Dict], context: RedTeamContext) -> Dict[str, Any]:
+                """Calculate operational risk from red team findings"""
+                risk_factors = {
+                    'stealth_capability': self._assess_stealth_capability(findings),
+                    'persistence_risk': self._assess_persistence_risk(findings),
+                    'data_exposure_risk': self._assess_data_exposure_risk(findings, context),
+                    'compliance_impact': self._assess_compliance_impact(findings, context),
+                    'business_disruption_potential': self._assess_disruption_potential(findings)
+                }
+                
+                # Calculate overall operational risk score (1-100)
+                weights = {
+                    'stealth_capability': 0.25,
+                    'persistence_risk': 0.20,
+                    'data_exposure_risk': 0.25,
+                    'compliance_impact': 0.15,
+                    'business_disruption_potential': 0.15
+                }
+                
+                overall_risk = sum(risk_factors[factor] * weights[factor] for factor in risk_factors)
+                
+                return {
+                    'overall_risk_score': round(overall_risk, 1),
+                    'risk_level': self._categorize_risk_level(overall_risk),
+                    'risk_factors': risk_factors,
+                    'critical_gaps': self._identify_critical_gaps(risk_factors),
+                    'immediate_actions': self._recommend_immediate_actions(risk_factors)
+                }
+            
+            def _assess_stealth_capability(self, findings: List[Dict]) -> float:
+                """Assess adversary stealth capability (0-100)"""
+                stealth_score = 50  # Base score
+                
+                for finding in findings:
+                    # Check for detection evasion techniques
+                    if finding.get('type') == 'defense_evasion':
+                        stealth_score += 15
+                    
+                    # Check for stealth in exfiltration
+                    if finding.get('steganography', False):
+                        stealth_score += 10
+                    if finding.get('encryption', False):
+                        stealth_score += 5
+                    
+                    # Check for low detection likelihood
+                    detection_likelihood = finding.get('detection_likelihood', 'medium')
+                    if detection_likelihood == 'very low':
+                        stealth_score += 10
+                    elif detection_likelihood == 'low':
+                        stealth_score += 5
+                    
+                    # Check for OPSEC considerations
+                    if finding.get('opsec_score', 0) >= 8:
+                        stealth_score += 10
+                
+                return min(stealth_score, 100)
+            
+            def _assess_persistence_risk(self, findings: List[Dict]) -> float:
+                """Assess persistence mechanism risk (0-100)"""
+                persistence_score = 0
+                persistence_count = 0
+                
+                for finding in findings:
+                    if finding.get('type') == 'persistence':
+                        persistence_count += 1
+                        
+                        # Score based on detection difficulty
+                        detection_difficulty = finding.get('detection_difficulty', 'medium')
+                        if detection_difficulty == 'high':
+                            persistence_score += 30
+                        elif detection_difficulty == 'medium':
+                            persistence_score += 20
+                        else:
+                            persistence_score += 10
+                        
+                        # Score based on hiding capability
+                        if finding.get('hidden', False):
+                            persistence_score += 15
+                
+                # Multiple persistence mechanisms increase risk
+                if persistence_count > 1:
+                    persistence_score *= 1.5
+                
+                return min(persistence_score, 100)
+            
+            def _assess_data_exposure_risk(self, findings: List[Dict], context: RedTeamContext) -> float:
+                """Assess data exposure risk (0-100)"""
+                exposure_score = 0
+                
+                for finding in findings:
+                    # Check for data exfiltration capabilities
+                    if finding.get('type') == 'data_exfiltration':
+                        data_size = finding.get('data_size_mb', 0)
+                        if data_size > 1000:  # Large data theft
+                            exposure_score += 40
+                        elif data_size > 100:
+                            exposure_score += 25
+                        else:
+                            exposure_score += 10
+                    
+                    # Check for credential access (leads to data exposure)
+                    if 'credential' in str(finding.get('type', '')):
+                        exposure_score += 25
+                    
+                    # Check for lateral movement to sensitive systems
+                    if finding.get('type') == 'lateral_movement':
+                        target = finding.get('target_host', '').lower()
+                        if any(sensitive in target for sensitive in ['db', 'sql', 'file', 'share']):
+                            exposure_score += 30
+                
+                # Consider business context
+                if 'financial_transactions' in context.critical_business_processes:
+                    exposure_score *= 1.3
+                if 'customer_data_processing' in context.critical_business_processes:
+                    exposure_score *= 1.2
+                
+                return min(exposure_score, 100)
+            
+            def _assess_compliance_impact(self, findings: List[Dict], context: RedTeamContext) -> float:
+                """Assess compliance impact (0-100)"""
+                compliance_score = 0
+                
+                # Base compliance risk from demonstrated capabilities
+                has_data_access = any(f.get('type') == 'data_exfiltration' for f in findings)
+                has_persistence = any(f.get('type') == 'persistence' for f in findings)
+                has_credential_access = any('credential' in str(f.get('type', '')) for f in findings)
+                
+                # GDPR impact
+                if 'GDPR' in context.regulatory_requirements:
+                    if has_data_access:
+                        compliance_score += 35
+                    if has_persistence:
+                        compliance_score += 15
+                
+                # PCI-DSS impact
+                if 'PCI-DSS' in context.regulatory_requirements:
+                    if has_credential_access or has_data_access:
+                        compliance_score += 30
+                
+                # SOX impact
+                if 'SOX' in context.regulatory_requirements:
+                    if has_persistence or has_credential_access:
+                        compliance_score += 25
+                
+                return min(compliance_score, 100)
+            
+            def _assess_disruption_potential(self, findings: List[Dict]) -> float:
+                """Assess business disruption potential (0-100)"""
+                disruption_score = 0
+                
+                for finding in findings:
+                    finding_type = finding.get('type', '')
+                    
+                    # Ransomware/Impact operations
+                    if 'impact' in finding_type or 'ransomware' in str(finding.get('technique', '')):
+                        disruption_score += 50
+                    
+                    # Lateral movement increases disruption potential
+                    if finding_type == 'lateral_movement':
+                        disruption_score += 15
+                    
+                    # Persistence allows sustained disruption
+                    if finding_type == 'persistence':
+                        disruption_score += 20
+                    
+                    # C2 infrastructure enables ongoing operations
+                    if finding_type == 'c2_infrastructure':
+                        disruption_score += 15
+                
+                return min(disruption_score, 100)
+            
+            def _categorize_risk_level(self, risk_score: float) -> str:
+                """Categorize overall risk level"""
+                if risk_score >= 80:
+                    return "Critical"
+                elif risk_score >= 60:
+                    return "High" 
+                elif risk_score >= 40:
+                    return "Medium"
+                else:
+                    return "Low"
+            
+            def _identify_critical_gaps(self, risk_factors: Dict[str, float]) -> List[str]:
+                """Identify critical security gaps"""
+                gaps = []
+                
+                if risk_factors['stealth_capability'] >= 70:
+                    gaps.append("Insufficient detection capabilities for advanced evasion techniques")
+                
+                if risk_factors['persistence_risk'] >= 60:
+                    gaps.append("Weak controls against persistence mechanisms")
+                
+                if risk_factors['data_exposure_risk'] >= 70:
+                    gaps.append("Critical data protection deficiencies")
+                
+                if risk_factors['compliance_impact'] >= 50:
+                    gaps.append("Regulatory compliance controls insufficient")
+                
+                if risk_factors['business_disruption_potential'] >= 60:
+                    gaps.append("Business continuity protections inadequate")
+                
+                return gaps
+            
+            def _recommend_immediate_actions(self, risk_factors: Dict[str, float]) -> List[str]:
+                """Recommend immediate remediation actions"""
+                actions = []
+                
+                if risk_factors['stealth_capability'] >= 70:
+                    actions.append("Deploy advanced EDR/XDR solutions with behavioral analytics")
+                
+                if risk_factors['persistence_risk'] >= 60:
+                    actions.append("Implement application whitelisting and registry monitoring")
+                
+                if risk_factors['data_exposure_risk'] >= 70:
+                    actions.append("Encrypt sensitive data and implement DLP controls")
+                
+                if risk_factors['compliance_impact'] >= 50:
+                    actions.append("Conduct compliance gap analysis and remediate controls")
+                
+                if risk_factors['business_disruption_potential'] >= 60:
+                    actions.append("Test and update incident response and business continuity plans")
+                
+                return actions
+        
+        # Main analysis execution
+        context = RedTeamContext()
+        if asset_context:
+            # Override defaults with provided context
+            for key, value in asset_context.items():
+                if hasattr(context, key):
+                    setattr(context, key, value)
+        
+        analyst = AdversaryAnalyst()
+        
+        # Perform comprehensive analysis
+        attack_path_analysis = analyst.assess_attack_path_risk(findings)
+        capability_analysis = analyst.assess_adversary_capabilities(findings)
+        operational_risk = analyst.calculate_operational_risk(findings, context)
+        
+        # Generate executive summary
+        executive_summary = self._generate_redteam_executive_summary(
+            findings, attack_path_analysis, capability_analysis, operational_risk
+        )
+        
+        # Calculate business impact score (1-100)
+        business_impact_score = self._calculate_business_impact_score(
+            attack_path_analysis, capability_analysis, operational_risk
+        )
+        
+        return {
+            'analysis_timestamp': datetime.now().isoformat(),
+            'business_impact_score': business_impact_score,
+            'risk_level': operational_risk['risk_level'],
+            'executive_summary': executive_summary,
+            'attack_path_analysis': attack_path_analysis,
+            'adversary_capability_analysis': capability_analysis,
+            'operational_risk_assessment': operational_risk,
+            'recommendations': {
+                'immediate_actions': operational_risk['immediate_actions'],
+                'strategic_improvements': self._generate_strategic_recommendations(
+                    attack_path_analysis, capability_analysis
+                ),
+                'investment_priorities': self._prioritize_security_investments(operational_risk)
+            },
+            'metrics': {
+                'total_findings': len(findings),
+                'critical_attack_paths': attack_path_analysis['high_risk_paths'],
+                'demonstrated_tactics': capability_analysis['tactics_count'],
+                'compliance_risk_score': operational_risk['risk_factors']['compliance_impact']
+            }
+        }
+    
+    def _generate_redteam_executive_summary(
+        self, 
+        findings: List[Dict], 
+        attack_paths: Dict, 
+        capabilities: Dict, 
+        operational_risk: Dict
+    ) -> str:
+        """Generate executive summary for red team assessment"""
+        
+        findings_count = len(findings)
+        high_risk_paths = attack_paths['high_risk_paths']
+        sophistication = capabilities['sophistication_level']
+        risk_level = operational_risk['risk_level']
+        
+        summary = f"""
+RED TEAM ASSESSMENT - EXECUTIVE SUMMARY
+
+SIMULATION RESULTS:
+• {findings_count} adversary techniques successfully demonstrated
+• {high_risk_paths} high-risk attack paths identified to critical assets
+• Adversary sophistication level: {sophistication}
+• Overall business risk level: {risk_level}
+
+ADVERSARY CAPABILITIES DEMONSTRATED:
+• Attack surface compromise and initial access achieved
+• {capabilities['tactics_count']} of 12 MITRE ATT&CK tactics successfully executed
+• {capabilities['apt_simulation_completeness']} completion of advanced persistent threat simulation
+• Threat actor profile matches: {capabilities['threat_actor_emulation']}
+
+CRITICAL BUSINESS RISKS:
+• Crown jewel exposure: {attack_paths['crown_jewel_exposure']['exposure_severity']} severity
+• {attack_paths['crown_jewel_exposure']['total_exposed_assets']} critical business assets exposed to attack
+• Data exposure risk: {operational_risk['risk_factors']['data_exposure_risk']:.0f}/100
+• Business disruption potential: {operational_risk['risk_factors']['business_disruption_potential']:.0f}/100
+
+IMMEDIATE ATTENTION REQUIRED:
+{chr(10).join('• ' + action for action in operational_risk['immediate_actions'][:3])}
+
+The red team assessment demonstrates significant security gaps that require immediate executive attention and investment in defensive capabilities.
+        """.strip()
+        
+        return summary
+    
+    def _calculate_business_impact_score(
+        self, 
+        attack_paths: Dict, 
+        capabilities: Dict, 
+        operational_risk: Dict
+    ) -> float:
+        """Calculate overall business impact score (1-100)"""
+        
+        # Weight different factors
+        weights = {
+            'attack_path_risk': 0.30,      # 30% - Direct access to critical systems
+            'adversary_sophistication': 0.25, # 25% - Threat actor capability level
+            'operational_risk': 0.25,      # 25% - Business operations impact
+            'compliance_risk': 0.20        # 20% - Regulatory/compliance impact
+        }
+        
+        # Normalize scores to 0-100 scale
+        attack_path_score = min(attack_paths['average_path_risk'] * 10, 100)
+        
+        sophistication_score = {
+            'Nation-State Level': 100,
+            'Advanced Persistent Threat': 85,
+            'Sophisticated Criminal Group': 70,
+            'Intermediate Threat Actor': 50,
+            'Basic Threat Actor': 25
+        }.get(capabilities['sophistication_level'], 50)
+        
+        operational_score = operational_risk['overall_risk_score']
+        compliance_score = operational_risk['risk_factors']['compliance_impact']
+        
+        # Calculate weighted score
+        business_impact_score = (
+            attack_path_score * weights['attack_path_risk'] +
+            sophistication_score * weights['adversary_sophistication'] +
+            operational_score * weights['operational_risk'] +
+            compliance_score * weights['compliance_risk']
+        )
+        
+        return round(business_impact_score, 1)
+    
+    def _generate_strategic_recommendations(
+        self, 
+        attack_paths: Dict, 
+        capabilities: Dict
+    ) -> List[str]:
+        """Generate strategic security recommendations"""
+        recommendations = []
+        
+        # Attack path mitigation
+        if attack_paths['high_risk_paths'] > 0:
+            recommendations.append(
+                "Implement network segmentation to limit lateral movement and isolate critical assets"
+            )
+        
+        # Capability-based recommendations
+        demonstrated_caps = capabilities['demonstrated_capabilities']
+        if demonstrated_caps.get('credential_access'):
+            recommendations.append(
+                "Deploy privileged access management (PAM) solution and implement zero-trust architecture"
+            )
+        
+        if demonstrated_caps.get('persistence'):
+            recommendations.append(
+                "Enhance endpoint detection and response (EDR) with behavioral analytics"
+            )
+        
+        if demonstrated_caps.get('lateral_movement'):
+            recommendations.append(
+                "Implement micro-segmentation and network access control (NAC)"
+            )
+        
+        if demonstrated_caps.get('exfiltration'):
+            recommendations.append(
+                "Deploy data loss prevention (DLP) and network traffic analytics"
+            )
+        
+        # Always include these strategic recommendations
+        recommendations.extend([
+            "Establish continuous security monitoring with SIEM/SOAR integration",
+            "Implement threat hunting program with focus on demonstrated attack techniques",
+            "Conduct regular purple team exercises to test detection capabilities"
+        ])
+        
+        return recommendations
+    
+    def _prioritize_security_investments(self, operational_risk: Dict) -> List[Dict[str, Any]]:
+        """Prioritize security investment areas"""
+        risk_factors = operational_risk['risk_factors']
+        
+        investments = [
+            {
+                'area': 'Detection & Response',
+                'priority': 'Critical' if risk_factors['stealth_capability'] >= 70 else 'High',
+                'estimated_cost': '$500K-2M',
+                'timeframe': '6-12 months',
+                'roi_indicators': ['Mean time to detection', 'False positive rate', 'Threat hunt success rate']
+            },
+            {
+                'area': 'Endpoint Security',
+                'priority': 'Critical' if risk_factors['persistence_risk'] >= 60 else 'High',
+                'estimated_cost': '$200K-800K',
+                'timeframe': '3-6 months',
+                'roi_indicators': ['Malware detection rate', 'Endpoint visibility coverage', 'Response time']
+            },
+            {
+                'area': 'Data Protection',
+                'priority': 'Critical' if risk_factors['data_exposure_risk'] >= 70 else 'Medium',
+                'estimated_cost': '$300K-1.5M',
+                'timeframe': '6-18 months',
+                'roi_indicators': ['Data classification coverage', 'DLP policy effectiveness', 'Encryption adoption']
+            },
+            {
+                'area': 'Network Security',
+                'priority': 'High',
+                'estimated_cost': '$400K-1M',
+                'timeframe': '9-15 months',
+                'roi_indicators': ['Network segmentation coverage', 'East-west traffic visibility', 'Lateral movement prevention']
+            },
+            {
+                'area': 'Identity & Access Management',
+                'priority': 'Critical' if any(cap for cap in ['credential_access', 'privilege_escalation'] if risk_factors.get(cap, 0) >= 60) else 'High',
+                'estimated_cost': '$250K-1.2M',
+                'timeframe': '6-12 months',
+                'roi_indicators': ['Privileged account coverage', 'MFA adoption rate', 'Access review compliance']
+            }
+        ]
+        
+        # Sort by priority
+        priority_order = {'Critical': 0, 'High': 1, 'Medium': 2, 'Low': 3}
+        investments.sort(key=lambda x: priority_order.get(x['priority'], 3))
+        
+        return investments
+
     def _log_operation(self, tactic: str, technique: str, details: Dict[str, Any]):
         """Log red team operation"""
         log_entry = {

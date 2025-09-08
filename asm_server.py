@@ -851,6 +851,330 @@ class ASMServer:
         
         return summary
     
+    async def _analyze_business_impact(self, findings: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Analyze ASM findings for business impact and attack surface exposure"""
+        
+        try:
+            enhanced_findings = []
+            summary_stats = {
+                'total_findings': len(findings),
+                'critical_exposure': 0,
+                'high_exposure': 0,
+                'internet_facing_assets': 0,
+                'exposed_admin_interfaces': 0,
+                'outdated_technologies': 0,
+                'attack_surface_score': 0,
+                'analysis_timestamp': datetime.now().isoformat()
+            }
+            
+            total_risk_score = 0
+            
+            for finding in findings:
+                try:
+                    # ASM-specific business impact analysis
+                    enhanced_finding = await self._analyze_asm_finding_impact(finding)
+                    enhanced_findings.append(enhanced_finding)
+                    
+                    # Update summary stats
+                    risk_level = enhanced_finding.get('exposure_level', 'low')
+                    if risk_level == 'critical':
+                        summary_stats['critical_exposure'] += 1
+                    elif risk_level == 'high':
+                        summary_stats['high_exposure'] += 1
+                    
+                    if enhanced_finding.get('internet_facing', False):
+                        summary_stats['internet_facing_assets'] += 1
+                    
+                    if enhanced_finding.get('admin_interface_detected', False):
+                        summary_stats['exposed_admin_interfaces'] += 1
+                    
+                    if enhanced_finding.get('outdated_technology', False):
+                        summary_stats['outdated_technologies'] += 1
+                    
+                    total_risk_score += enhanced_finding.get('exposure_score', 0)
+
+                except Exception as e:
+                    logger.error(f"Failed to analyze ASM finding: {str(e)}")
+                    enhanced_findings.append({
+                        **finding,
+                        'asm_analysis_error': str(e),
+                        'exposure_level': 'unknown'
+                    })
+            
+            # Calculate overall attack surface score
+            if findings:
+                summary_stats['attack_surface_score'] = round(total_risk_score / len(findings), 2)
+            
+            return {
+                'enhanced_findings': enhanced_findings,
+                'summary': summary_stats,
+                'attack_surface_summary': self._generate_attack_surface_summary(summary_stats),
+                'recommended_actions': self._generate_asm_action_plan(enhanced_findings),
+                'exposure_analysis_enabled': True
+            }
+    
+        except Exception as e:
+            logger.error(f"Business impact analysis failed: {str(e)}")
+            return {
+                'error': f'Business impact analysis failed: {str(e)}',
+                'enhanced_findings': findings,  # Return original findings
+                'analysis_timestamp': datetime.now().isoformat()
+            }
+    
+    async def _analyze_asm_finding_impact(self, finding: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze individual ASM finding for business exposure impact"""
+        
+        asset = finding.get('asset', finding.get('domain', finding.get('url', 'unknown')))
+        finding_type = finding.get('type', 'unknown')
+        
+        # Determine exposure level based on ASM finding characteristics
+        exposure_score = 0
+        exposure_factors = []
+        
+        # Check if it's internet-facing
+        internet_facing = self._is_internet_facing(asset, finding)
+        if internet_facing:
+            exposure_score += 3
+            exposure_factors.append("Internet-facing asset")
+        
+        # Check for admin interfaces
+        admin_interface = self._detect_admin_interface(asset, finding)
+        if admin_interface:
+            exposure_score += 4
+            exposure_factors.append("Administrative interface detected")
+        
+        # Check for sensitive technologies
+        if finding_type in ['technology_detection', 'service_enumeration']:
+            tech_risk = self._assess_technology_risk(finding)
+            exposure_score += tech_risk
+            if tech_risk > 2:
+                exposure_factors.append("High-risk technology detected")
+        
+        # Check for exposed services
+        if finding_type == 'port_scan' or 'ports' in finding:
+            service_risk = self._assess_service_exposure(finding)
+            exposure_score += service_risk
+            if service_risk > 1:
+                exposure_factors.append("Exposed services detected")
+        
+        # Check for subdomain takeover risks
+        if finding_type == 'subdomain_enumeration':
+            takeover_risk = self._assess_subdomain_risk(finding)
+            exposure_score += takeover_risk
+            if takeover_risk > 0:
+                exposure_factors.append("Potential subdomain takeover risk")
+        
+        # Determine exposure level
+        if exposure_score >= 8:
+            exposure_level = 'critical'
+        elif exposure_score >= 5:
+            exposure_level = 'high'
+        elif exposure_score >= 3:
+            exposure_level = 'medium'
+        else:
+            exposure_level = 'low'
+        
+        # Generate recommendations
+        recommendations = self._generate_asm_recommendations(exposure_level, exposure_factors, finding)
+        
+        return {
+            **finding,
+            'exposure_score': exposure_score,
+            'exposure_level': exposure_level,
+            'exposure_factors': exposure_factors,
+            'internet_facing': internet_facing,
+            'admin_interface_detected': admin_interface,
+            'outdated_technology': exposure_score >= 6,
+            'recommendations': recommendations,
+            'escalation_required': exposure_score >= 7,
+            'attack_surface_impact': self._describe_attack_surface_impact(exposure_level, finding_type)
+        }
+    
+    def _is_internet_facing(self, asset: str, finding: Dict[str, Any]) -> bool:
+        """Determine if asset is internet-facing"""
+        asset_lower = asset.lower()
+        
+        # Check for public-facing indicators
+        public_indicators = ['www', 'api', 'mail', 'ftp', 'web', 'public', 'cdn', 'static']
+        if any(indicator in asset_lower for indicator in public_indicators):
+            return True
+        
+        # Check if it's a known public port
+        ports = finding.get('ports', finding.get('open_ports', []))
+        public_ports = [80, 443, 21, 22, 25, 53, 110, 143, 993, 995]
+        if isinstance(ports, list) and any(port in public_ports for port in ports):
+            return True
+        
+        return False
+    
+    def _detect_admin_interface(self, asset: str, finding: Dict[str, Any]) -> bool:
+        """Detect administrative interfaces"""
+        asset_lower = asset.lower()
+        admin_indicators = ['admin', 'management', 'console', 'control', 'panel', 'dashboard']
+        
+        if any(indicator in asset_lower for indicator in admin_indicators):
+            return True
+        
+        # Check for admin-specific ports or services
+        admin_ports = [8080, 8443, 9000, 9090, 10000]
+        ports = finding.get('ports', finding.get('open_ports', []))
+        if isinstance(ports, list) and any(port in admin_ports for port in ports):
+            return True
+        
+        return False
+    
+    def _assess_technology_risk(self, finding: Dict[str, Any]) -> int:
+        """Assess risk level of detected technologies"""
+        technologies = finding.get('technologies', finding.get('stack', []))
+        if not technologies:
+            return 0
+        
+        high_risk_tech = ['wordpress', 'drupal', 'joomla', 'phpmyadmin', 'jenkins', 'gitlab']
+        medium_risk_tech = ['apache', 'nginx', 'iis', 'tomcat', 'jboss']
+        
+        risk_score = 0
+        if isinstance(technologies, list):
+            for tech in technologies:
+                tech_lower = str(tech).lower()
+                if any(risky in tech_lower for risky in high_risk_tech):
+                    risk_score += 3
+                elif any(medium in tech_lower for medium in medium_risk_tech):
+                    risk_score += 1
+        
+        return min(risk_score, 5)  # Cap at 5
+    
+    def _assess_service_exposure(self, finding: Dict[str, Any]) -> int:
+        """Assess risk of exposed services"""
+        ports = finding.get('ports', finding.get('open_ports', []))
+        if not ports:
+            return 0
+        
+        high_risk_ports = [21, 23, 135, 139, 445, 1433, 3306, 5432, 6379]  # FTP, Telnet, SMB, DB ports
+        medium_risk_ports = [22, 25, 110, 143, 993, 995]  # SSH, Mail services
+        
+        risk_score = 0
+        if isinstance(ports, list):
+            for port in ports:
+                if port in high_risk_ports:
+                    risk_score += 2
+                elif port in medium_risk_ports:
+                    risk_score += 1
+        
+        return min(risk_score, 4)  # Cap at 4
+    
+    def _assess_subdomain_risk(self, finding: Dict[str, Any]) -> int:
+        """Assess subdomain takeover and related risks"""
+        subdomains = finding.get('subdomains', [])
+        if not subdomains:
+            return 0
+        
+        risk_indicators = ['github.io', 'herokuapp.com', 'cloudfront.net', 'amazonaws.com']
+        risk_score = 0
+        
+        if isinstance(subdomains, list):
+            for subdomain in subdomains:
+                subdomain_str = str(subdomain).lower()
+                if any(indicator in subdomain_str for indicator in risk_indicators):
+                    risk_score += 1
+        
+        return min(risk_score, 3)  # Cap at 3
+    
+    def _generate_asm_recommendations(self, exposure_level: str, exposure_factors: List[str], finding: Dict[str, Any]) -> List[str]:
+        """Generate ASM-specific recommendations"""
+        recommendations = []
+        
+        if exposure_level == 'critical':
+            recommendations.append("URGENT: Immediate security review required")
+            recommendations.append("Consider taking asset offline pending security assessment")
+        elif exposure_level == 'high':
+            recommendations.append("High priority: Schedule security assessment within 48 hours")
+        
+        if "Internet-facing asset" in exposure_factors:
+            recommendations.append("Implement web application firewall (WAF)")
+            recommendations.append("Enable HTTPS with proper certificates")
+        
+        if "Administrative interface detected" in exposure_factors:
+            recommendations.append("Restrict admin interface access to authorized networks only")
+            recommendations.append("Implement multi-factor authentication")
+        
+        if "High-risk technology detected" in exposure_factors:
+            recommendations.append("Update to latest stable versions")
+            recommendations.append("Review security hardening guidelines")
+        
+        if "Exposed services detected" in exposure_factors:
+            recommendations.append("Audit exposed services - disable unnecessary services")
+            recommendations.append("Implement network segmentation")
+        
+        return recommendations
+    
+    def _describe_attack_surface_impact(self, exposure_level: str, finding_type: str) -> str:
+        """Describe the attack surface impact"""
+        if exposure_level == 'critical':
+            return f"Critical attack surface expansion - {finding_type} significantly increases organizational risk"
+        elif exposure_level == 'high':
+            return f"High attack surface impact - {finding_type} creates substantial security exposure"
+        elif exposure_level == 'medium':
+            return f"Moderate attack surface impact - {finding_type} increases security risk"
+        else:
+            return f"Low attack surface impact - {finding_type} has minimal security implications"
+    
+    def _generate_attack_surface_summary(self, stats: Dict[str, Any]) -> str:
+        """Generate executive summary of attack surface analysis"""
+        total = stats['total_findings']
+        critical = stats['critical_exposure']
+        high = stats['high_exposure']
+        internet_facing = stats['internet_facing_assets']
+        admin_interfaces = stats['exposed_admin_interfaces']
+        
+        if critical > 0:
+            summary = f"CRITICAL: {critical}/{total} findings pose critical attack surface risks. "
+        elif high > 0:
+            summary = f"HIGH RISK: {high}/{total} findings create significant attack surface exposure. "
+        else:
+            summary = "Attack surface risk is within acceptable parameters. "
+        
+        summary += f"Discovered {internet_facing} internet-facing assets"
+        if admin_interfaces > 0:
+            summary += f" including {admin_interfaces} exposed administrative interfaces"
+        summary += f". Overall attack surface score: {stats['attack_surface_score']}/10."
+        
+        return summary
+    
+    def _generate_asm_action_plan(self, enhanced_findings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Generate action plan for ASM findings"""
+        actions = []
+        
+        # Group by exposure level
+        critical_findings = [f for f in enhanced_findings if f.get('exposure_level') == 'critical']
+        high_findings = [f for f in enhanced_findings if f.get('exposure_level') == 'high']
+        admin_findings = [f for f in enhanced_findings if f.get('admin_interface_detected', False)]
+        
+        if critical_findings:
+            actions.append({
+                'priority': 'IMMEDIATE',
+                'action': 'Security team review',
+                'description': f'Review {len(critical_findings)} critical attack surface exposures',
+                'timeline': 'Within 4 hours'
+            })
+        
+        if high_findings:
+            actions.append({
+                'priority': 'HIGH', 
+                'action': 'Attack surface reduction',
+                'description': f'Address {len(high_findings)} high-risk exposures',
+                'timeline': 'Within 48 hours'
+            })
+        
+        if admin_findings:
+            actions.append({
+                'priority': 'HIGH',
+                'action': 'Secure admin interfaces',
+                'description': f'Implement access controls for {len(admin_findings)} admin interfaces',
+                'timeline': 'Within 24 hours'
+            })
+        
+        return actions
+    
     async def run(self):
         """Run the MCP server"""
         async with stdio_server() as (read_stream, write_stream):
