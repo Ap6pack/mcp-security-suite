@@ -202,6 +202,19 @@ headers = await analyze_security_headers("https://example.com")
 print(f"Security score: {headers['percentage']}%")
 ```
 
+## 🔌 Client Options
+
+Beyond Claude Desktop, you can use these Python clients directly:
+
+| Client | Purpose | Usage |
+|--------|---------|-------|
+| **`test_basic_client.py`** | Learning & simple scripts | `python test_basic_client.py` |
+| **`advanced_client.py`** | Production automation | `from advanced_client import AdvancedSecurityClient` |
+| **`custom_client.py`** | Interactive CLI | `python custom_client.py` (full menu system) |
+| **`test_advanced_client.py`** | FastMCP testing | `python test_advanced_client.py` |
+
+See our [Integration Guide](MCP_INTEGRATION_GUIDE.md) for detailed examples!
+
 ## 🛡️ Best Practices
 
 ### 1. **Authorization & Scope**
