@@ -9,13 +9,12 @@ import json
 import asyncio
 import logging
 from typing import Any, Dict, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 import aiohttp
 import ssl
 import socket
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict, is_dataclass
 from enum import Enum
-
 
 # MCP Server imports
 from mcp.server import Server
@@ -23,6 +22,22 @@ from mcp.server.stdio import stdio_server
 import mcp.types as types
 
 logger = logging.getLogger(__name__)
+
+class MCPJSONEncoder(json.JSONEncoder):
+    """Custom JSON encoder for MCP responses that handles datetime, dataclasses, enums"""
+    
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.isoformat()
+        elif is_dataclass(obj):
+            return asdict(obj)
+        elif isinstance(obj, Enum):
+            return obj.value
+        elif hasattr(obj, '__dict__'):
+            return obj.__dict__
+        elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes)):
+            return list(obj)
+        return str(obj)
 
 @dataclass
 class SecurityConfig:
@@ -42,7 +57,7 @@ class SecurityToolsServer:
     
     def __init__(self, config: SecurityConfig = None):
         self.config = config or SecurityConfig()
-        self.server = Server("security-tools")
+        self.server = Server("mcp-security-suite")
         self.setup_tools()
         
     def setup_tools(self):
@@ -177,38 +192,48 @@ class SecurityToolsServer:
         # Register the call_tool handler
         @self.server.call_tool()
         async def handle_call_tool(name: str, arguments: dict) -> List[types.TextContent]:
-            """Handle tool calls"""
+            """Handle tool calls with robust error handling"""            
+            try:
+                if name == "check_ssl_certificate":
+                    result = await self._check_ssl_certificate(arguments.get("domain", ""))
+                elif name == "query_cve_database":
+                    result = await self._query_cve_database(
+                        arguments.get("cve_id"),
+                        arguments.get("keyword"),
+                        arguments.get("last_n_days", 7)
+                    )
+                elif name == "analyze_security_headers":
+                    result = await self._analyze_security_headers(arguments.get("url", ""))
+                elif name == "dns_lookup":
+                    result = await self._dns_lookup(
+                        arguments.get("domain", ""),
+                        arguments.get("record_type", "A")
+                    )
+                elif name == "whois_lookup":
+                    result = await self._whois_lookup(arguments.get("domain", ""))
+                elif name == "check_breach_database":
+                    result = await self._check_breach_database(
+                        arguments.get("email"),
+                        arguments.get("domain")
+                    )
+                elif name == "analyze_business_impact":
+                    result = await self._analyze_business_impact(
+                        arguments.get("findings", [])
+                    )    
+                else:
+                    result = {"error": f"Unknown tool: {name}"}
+                
+                # Use custom encoder that handles datetime and dataclasses
+                return [types.TextContent(type="text", text=json.dumps(result, cls=MCPJSONEncoder, indent=2))]
             
-            if name == "check_ssl_certificate":
-                result = await self._check_ssl_certificate(arguments.get("domain", ""))
-            elif name == "query_cve_database":
-                result = await self._query_cve_database(
-                    arguments.get("cve_id"),
-                    arguments.get("keyword"),
-                    arguments.get("last_n_days", 7)
-                )
-            elif name == "analyze_security_headers":
-                result = await self._analyze_security_headers(arguments.get("url", ""))
-            elif name == "dns_lookup":
-                result = await self._dns_lookup(
-                    arguments.get("domain", ""),
-                    arguments.get("record_type", "A")
-                )
-            elif name == "whois_lookup":
-                result = await self._whois_lookup(arguments.get("domain", ""))
-            elif name == "check_breach_database":
-                result = await self._check_breach_database(
-                    arguments.get("email"),
-                    arguments.get("domain")
-                )
-            elif name == "analyze_business_impact":
-                result = await self._analyze_business_impact(
-                    arguments.get("findings", [])
-                )    
-            else:
-                result = {"error": f"Unknown tool: {name}"}
-            
-            return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
+            except Exception as e:
+                logger.error(f"Error in tool {name}: {str(e)}", exc_info=True)
+                error_result = {
+                    "error": f"Tool execution failed: {str(e)}",
+                    "tool": name,
+                    "timestamp": datetime.now().isoformat()
+                }
+                return [types.TextContent(type="text", text=json.dumps(error_result, cls=MCPJSONEncoder))]
         
     async def _check_ssl_certificate(self, domain: str) -> Dict[str, Any]:
         """Check SSL certificate information for a domain"""
@@ -304,11 +329,21 @@ class SecurityToolsServer:
     
     async def _dns_lookup(self, domain: str, record_type: str = "A") -> Dict[str, Any]:
         """Perform DNS lookup for a domain"""
-        import dns.resolver
-        
+        if not domain:
+            return {"error": "Domain is required"}
+            
         valid_types = ["A", "AAAA", "MX", "TXT", "NS", "CNAME", "SOA"]
         if record_type not in valid_types:
             return {"error": f"Invalid record type. Must be one of: {valid_types}"}
+        
+        try:
+            import dns.resolver
+        except ImportError:
+            return {
+                "error": "DNS lookup not available - dnspython library required",
+                "domain": domain,
+                "suggestion": "Install with: pip install dnspython"
+            }
         
         try:
             resolver = dns.resolver.Resolver()
@@ -331,17 +366,25 @@ class SecurityToolsServer:
                 "domain": domain,
                 "record_type": record_type,
                 "records": records,
-                "ttl": answers.ttl
+                "ttl": int(answers.ttl)
             }
             
-        except dns.resolver.NXDOMAIN:
-            return {"error": "Domain does not exist", "domain": domain}
         except Exception as e:
-            return {"error": str(e), "domain": domain}
+            return {"error": f"DNS lookup failed: {str(e)}", "domain": domain}
     
     async def _whois_lookup(self, domain: str) -> Dict[str, Any]:
         """Perform WHOIS lookup for a domain"""
-        import whois
+        if not domain:
+            return {"error": "Domain is required"}
+            
+        try:
+            import whois
+        except ImportError:
+            return {
+                "error": "WHOIS lookup not available - python-whois library required",
+                "domain": domain,
+                "suggestion": "Install with: pip install python-whois"
+            }
         
         try:
             w = whois.whois(domain)
@@ -349,18 +392,18 @@ class SecurityToolsServer:
             # Convert to serializable format
             result = {
                 "domain": domain,
-                "registrar": w.registrar,
-                "creation_date": str(w.creation_date) if w.creation_date else None,
-                "expiration_date": str(w.expiration_date) if w.expiration_date else None,
-                "last_updated": str(w.last_updated) if w.last_updated else None,
-                "status": w.status,
-                "name_servers": w.name_servers if isinstance(w.name_servers, list) else [w.name_servers]
+                "registrar": str(w.registrar) if w.registrar else None,
+                "creation_date": w.creation_date.isoformat() if w.creation_date else None,
+                "expiration_date": w.expiration_date.isoformat() if w.expiration_date else None,
+                "last_updated": w.last_updated.isoformat() if w.last_updated else None,
+                "status": w.status if isinstance(w.status, list) else [w.status] if w.status else [],
+                "name_servers": w.name_servers if isinstance(w.name_servers, list) else [w.name_servers] if w.name_servers else []
             }
             
             return result
             
         except Exception as e:
-            return {"error": str(e), "domain": domain}
+            return {"error": f"WHOIS lookup failed: {str(e)}", "domain": domain}
     
     async def _check_breach_database(self, email: str = None, domain: str = None) -> Dict[str, Any]:
         """Check if email or domain appears in breach databases"""
@@ -494,7 +537,15 @@ class SecurityAnalyst:
         # Enhanced finding with business intelligence
         enhanced_finding = {
             **finding,
-            'business_context': business_context.__dict__,
+            'business_context': {
+                'asset_name': business_context.asset_name,
+                'category': business_context.category.value if hasattr(business_context.category, 'value') else str(business_context.category),
+                'business_value': business_context.business_value,
+                'internet_facing': business_context.internet_facing,
+                'data_classification': business_context.data_classification,
+                'owner_team': business_context.owner_team,
+                'criticality': business_context.criticality
+            },
             'business_risk_score': business_risk,
             'business_risk_level': self._get_risk_level(business_risk).name,
             'recommended_action': action,
@@ -689,39 +740,62 @@ class SecurityToolsServer:
     # Add new tool for business analysis
     async def _analyze_business_impact(self, findings: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Analyze findings for business impact"""
-        
-        enhanced_findings = []
-        summary_stats = {
-            'total_findings': len(findings),
-            'critical_business_risk': 0,
-            'high_business_risk': 0,
-            'escalations_needed': 0,
-            'tickets_to_create': 0
-        }
-        
-        for finding in findings:
-            # Get business analysis
-            enhanced_finding = await self.analyst.analyze_finding_business_impact(finding)
-            enhanced_findings.append(enhanced_finding)
+
+        try:
+            enhanced_findings = []
+            summary_stats = {
+                'total_findings': len(findings),
+                'critical_business_risk': 0,
+                'high_business_risk': 0,
+                'escalations_needed': 0,
+                'tickets_to_create': 0,
+                'analysis_timestamp': datetime.now().isoformat()
+            }
             
-            # Update summary stats
-            risk_level = enhanced_finding['business_risk_level']
-            if risk_level == 'CRITICAL':
-                summary_stats['critical_business_risk'] += 1
-            elif risk_level == 'HIGH':
-                summary_stats['high_business_risk'] += 1
-            
-            if enhanced_finding['escalation_required']:
-                summary_stats['escalations_needed'] += 1
-            elif enhanced_finding['recommended_action'] == 'create_ticket':
-                summary_stats['tickets_to_create'] += 1
-        
-        return {
-            'enhanced_findings': enhanced_findings,
-            'summary': summary_stats,
-            'executive_summary': self._generate_executive_summary(summary_stats),
-            'recommended_actions': self._generate_action_plan(enhanced_findings)
-        }
+            for finding in findings:
+                try:
+                    # Get business analysis
+                    enhanced_finding = await self.analyst.analyze_finding_business_impact(finding)
+                    enhanced_findings.append(enhanced_finding)
+                    
+                    # Update summary stats
+                    risk_level = enhanced_finding['business_risk_level']
+                    if risk_level == 'CRITICAL':
+                        summary_stats['critical_business_risk'] += 1
+                    elif risk_level == 'HIGH':
+                        summary_stats['high_business_risk'] += 1
+                    
+                    if enhanced_finding['escalation_required']:
+                        summary_stats['escalations_needed'] += 1
+                    elif enhanced_finding['recommended_action'] == 'create_ticket':
+                        summary_stats['tickets_to_create'] += 1
+
+                except Exception as e:
+                    logger.error(f"Failed to analyze individual finding: {str(e)}")
+                    # Add finding with error indication but keep processing
+                    enhanced_findings.append({
+                        **finding,
+                        'business_analysis_error': str(e),
+                        'business_risk_level': 'UNKNOWN'
+                    })
+
+            return {
+                'enhanced_findings': enhanced_findings,
+                'summary': summary_stats,
+                'executive_summary': self._generate_executive_summary(summary_stats),
+                'recommended_actions': self._generate_action_plan(enhanced_findings),
+                'ai_analysis_enabled': True
+            }
+    
+        except Exception as e:
+            logger.error(f"Business impact analysis failed: {str(e)}", exc_info=True)
+            return {
+                'error': f"Business analysis failed: {str(e)}",
+                'enhanced_findings': findings,  # Return original findings
+                'ai_analysis_enabled': False,
+                'fallback_mode': True,
+                'timestamp': datetime.now().isoformat()
+            }    
     
     def _generate_executive_summary(self, stats: Dict) -> str:
         """Generate executive summary for leadership"""
