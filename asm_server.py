@@ -157,6 +157,25 @@ class ASMServer:
                         },
                         "required": ["base_url"]
                     }
+                ),
+                types.Tool(
+                    name="analyze_business_impact",
+                    description="Analyze security findings for business impact and risk prioritization",
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "findings": {
+                                "type": "array",
+                                "items": {"type": "object"},
+                                "description": "List of security findings to analyze"
+                            },
+                            "asset_context": {
+                                "type": "object",
+                                "description": "Additional business context for assets"
+                            }
+                        },
+                        "required": ["findings"]
+                    }
                 )
             ]
         
@@ -191,6 +210,9 @@ class ASMServer:
                     arguments.get("base_url", ""),
                     arguments.get("wordlist")
                 )
+            elif name == "analyze_business_impact":
+                result = await self._analyze_business_impact(
+                    arguments.get("findings", [])    )
             else:
                 result = {"error": f"Unknown tool: {name}"}
             
