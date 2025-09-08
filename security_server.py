@@ -733,7 +733,7 @@ class SecurityAnalyst:
 class SecurityToolsServer:
     def __init__(self, config: SecurityConfig = None):
         self.config = config or SecurityConfig()
-        self.server = Server("security-tools")
+        self.server = Server("mcp-security-suite")
         self.analyst = SecurityAnalyst()  # Add AI analyst
         self.setup_tools()
     
