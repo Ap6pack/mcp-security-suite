@@ -29,7 +29,9 @@ The Model Context Protocol (MCP) is a standardized protocol for communication be
 - See [GETTING_STARTED.md](GETTING_STARTED.md) for setup
 
 ### 2. Custom Python Client
-- Use the included `custom_client.py`
+- **Basic Client**: Use `test_basic_client.py` for simple examples
+- **Advanced Client**: Use `advanced_client.py` for FastMCP-based features  
+- **Production Client**: Use `custom_client.py` for full interactive interface
 - Build your own using the examples below
 
 ### 3. VS Code Extensions
@@ -46,12 +48,23 @@ The Model Context Protocol (MCP) is a standardized protocol for communication be
 
 ## Custom Python Client
 
+We provide three client approaches for different use cases:
+
+| Client | File | Use Case | Features |
+|--------|------|----------|----------|
+| **Basic** | `test_basic_client.py` | Learning, simple scripts | JSON-RPC, single server |
+| **Advanced** | `advanced_client.py` | Production automation | FastMCP, batch operations, multi-server |
+| **Production** | `custom_client.py` | Interactive use | Full UI, 30+ tools, connection pooling |
+
 ### Basic Example
+
+The following example shows a simple MCP client (available as `test_basic_client.py`):
 
 ```python
 #!/usr/bin/env python3
 """
 Basic MCP client for security tools
+Based on this integration guide - see test_basic_client.py for full implementation
 """
 
 import json
@@ -156,7 +169,49 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-### Advanced Client with Error Handling
+### Advanced Client with FastMCP
+
+For production use, we provide an advanced client using the FastMCP library (see `advanced_client.py`):
+
+```python
+import asyncio
+from advanced_client import AdvancedSecurityClient
+
+async def advanced_example():
+    client = AdvancedSecurityClient()
+    
+    # Connect to multiple servers
+    await client.connect(['security', 'asm'])
+    
+    # Batch SSL checks
+    domains = ['github.com', 'google.com', 'example.com']
+    results = await client.batch_ssl_check(domains)
+    
+    # Comprehensive security scan
+    scan_results = await client.comprehensive_security_scan('example.com')
+    
+    await client.disconnect()
+```
+
+### Production Client with Error Handling
+
+For full production features, use `custom_client.py`:
+
+```python
+from custom_client import SecurityToolsClient
+
+# Interactive client with all 30+ tools
+client = SecurityToolsClient()
+result = client.check_ssl_certificate("github.com")
+client.close()
+
+# Or run interactive mode
+# python custom_client.py
+```
+
+### Manual Implementation with Error Handling
+
+For custom implementations, here's a template:
 
 ```python
 import asyncio
@@ -491,7 +546,7 @@ async def get_mcp_client():
     """Get or create MCP client"""
     global mcp_client
     if not mcp_client:
-        from custom_client import MCPSecurityClient
+        from test_basic_client import MCPSecurityClient
         mcp_client = MCPSecurityClient('security_server.py')
         await mcp_client.start()
     return mcp_client
@@ -577,7 +632,7 @@ mcp_client = None
 async def startup_event():
     """Initialize MCP client on startup"""
     global mcp_client
-    from custom_client import MCPSecurityClient
+    from test_basic_client import MCPSecurityClient
     mcp_client = MCPSecurityClient('security_server.py')
     await mcp_client.start()
 
@@ -689,7 +744,7 @@ jobs:
         import asyncio
         import json
         import sys
-        from custom_client import MCPSecurityClient
+        from test_basic_client import MCPSecurityClient
         
         async def run_scan():
             client = MCPSecurityClient('security_server.py')
@@ -759,7 +814,7 @@ pipeline {
                     def scanScript = '''
                     import asyncio
                     import json
-                    from custom_client import MCPSecurityClient
+                    from test_basic_client import MCPSecurityClient
                     
                     async def scan():
                         client = MCPSecurityClient('security_server.py')
