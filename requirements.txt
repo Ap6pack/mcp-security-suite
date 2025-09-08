@@ -1,4 +1,5 @@
 # Core MCP dependency
+fastmcp>=2.12.2
 mcp>=0.1.0
 
 # Network and HTTP libraries
