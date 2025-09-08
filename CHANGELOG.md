@@ -5,6 +5,24 @@ All notable changes to the MCP Security Tools Suite will be documented in this f
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2025-09-08
+
+### Added
+- **Complete Business Impact Analysis Implementation**: All security servers now have comprehensive business impact analysis capabilities
+  - **ASM Server**: Internet-facing asset exposure assessment, attack surface risk scoring, technology stack vulnerability analysis
+  - **Pentest Server**: Vulnerability exploitability assessment, RCE detection, privilege escalation potential, authentication bypass analysis
+  - **Red Team Server**: Attack path risk assessment, adversary capability analysis mapped to MITRE ATT&CK framework, operational risk evaluation
+  - Executive-friendly summaries with clear business risk scoring and actionable recommendations
+  - Compliance impact assessment for GDPR, PCI-DSS, SOX, and other regulatory frameworks
+  - Strategic security investment prioritization with cost estimates and ROI indicators
+
+### Enhanced
+- **Business Risk Analysis**: Each server now provides context-specific business impact assessment
+  - Advanced risk scoring algorithms tailored to each security domain
+  - Crown jewel asset identification and exposure analysis
+  - Financial impact calculations and business continuity assessments
+  - Integration with regulatory compliance requirements
+
 ## [1.2.0] - 2025-09-08
 
 ### Added
