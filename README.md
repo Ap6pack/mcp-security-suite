@@ -405,4 +405,8 @@ Remember the security professional's creed:
 
 ---
 
+<a href="https://glama.ai/mcp/servers/@Ap6pack/mcp">
+ <img width="380" height="200" src="https://glama.ai/mcp/servers/@Ap6pack/mcp/badge" />
+</a>
+
 *Built with respect for security and privacy by the cybersecurity community*
